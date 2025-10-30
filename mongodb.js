@@ -36,6 +36,51 @@ async function writeDB(userDocuments, databaseName, collectionName){
 };
 
 
+async function readDB(documenFilter, databaseName, collectionName){
+    
+    await client.connect();
+    
+    const db = client.db(databaseName);
+    const collection = db.collection(collectionName);
+    //console.log("docfilter = ",documenFilter);
+    try{
+        if(documenFilter) {
+            const documentArr = await collection.find(documenFilter).toArray();
+
+            documentArr.forEach( (doc) => {
+                console.log(doc);
+           });
+        }else{
+            console.log("No documents filter specified");
+        }
+    }catch(error){
+        if(error instanceof MongoServerError){
+            console.log("Mongo Server Error :",error);
+        }
+        throw error;
+    }    
+
+    return "done";
+};
+
+//===== read tasks document from mongodb ==========
+//const docFilter = {_id: new ObjectId("69027dad3a20e3cf4de1ecfa")};
+const docFilter = {done: true};
+
+readDB(docFilter,"task-manager","tasks")
+.then(console.log)
+.catch(console.error)
+.finally(()=> client.close());
+
+//==== read user documents from mongodb =============
+//const docFilter = { Age :40 };
+// const docFilter = {_id: new ObjectId("690279d87f09b91485fc3ec8")};
+
+// readDB(docFilter,"task-manager","users")
+// .then(console.log)
+// .catch(console.error)
+// .finally(()=> client.close());
+
 // ====== adding user documents/records to users collection/table =======
 // writeDB([{name:"Freddy",Age:100},{name:"Stanford",Age:98}], "task-manager", "users" )
 // .then(console.log)
