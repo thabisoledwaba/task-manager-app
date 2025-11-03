@@ -63,14 +63,87 @@ async function readDB(documenFilter, databaseName, collectionName){
     return "done";
 };
 
-//===== read tasks document from mongodb ==========
-//const docFilter = {_id: new ObjectId("69027dad3a20e3cf4de1ecfa")};
-const docFilter = {done: true};
 
-readDB(docFilter,"task-manager","tasks")
+async function updateDB(query,updateData,databaseName, collectionName){
+    
+    await client.connect();
+    
+    const db = client.db(databaseName);
+    const collection = db.collection(collectionName);
+   
+    try{
+        if( query && updateData ) {
+            const result = await collection.updateMany(query,updateData);           
+            console.log(result);
+           
+        }else{
+            console.log("No query/updateData values specified");
+        }
+    }catch(error){
+        if(error instanceof MongoServerError){
+            console.log("Mongo Server Error :",error);
+        }
+        throw error;
+    }    
+
+    return "done";
+};
+
+
+async function deleteDB(docFilter, databaseName, collectionName){
+    
+    await client.connect();
+    
+    const db = client.db(databaseName);
+    const collection = db.collection(collectionName);
+
+    //const insertResult = await collection.insertOne(  );
+    try{
+        if( docFilter ) {
+            const Result = await collection.deleteMany(docFilter);
+            console.log("Documents deleted : ", Result.deletedCount );
+        }else{
+            console.log("No documents specified to delete");
+        }
+    }catch(error){
+        if(error instanceof MongoServerError){
+            console.log("Mongo Server Error :",error);
+        }
+        throw error;
+    }    
+
+    return "done";
+};
+
+
+//=============== deleted records =========================
+const deleteFilter = {Age:98};
+deleteDB(deleteFilter,"task-manager", "users" )
 .then(console.log)
 .catch(console.error)
-.finally(()=> client.close());
+.finally(()=>{client.close()});
+
+
+//===============update records====================
+//========= this will set all tasks to  done ======
+// const query  = {done:false};
+// const update = {$set: { done: true } };
+
+// updateDB( query, update, "task-manager", "tasks" )
+// .then(console.log)
+// .catch(console.error)
+// .finally(()=> client.close());
+
+
+
+//===== read tasks document from mongodb ==========
+//const docFilter = {_id: new ObjectId("69027dad3a20e3cf4de1ecfa")};
+//const docFilter = {done: true};
+
+// readDB(docFilter,"task-manager","tasks")
+// .then(console.log)
+// .catch(console.error)
+// .finally(()=> client.close());
 
 //==== read user documents from mongodb =============
 //const docFilter = { Age :40 };
