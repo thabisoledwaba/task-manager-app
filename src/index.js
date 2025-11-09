@@ -16,7 +16,7 @@ app.post("/users",(req, res) => {
         const userInstance = new user(req.body);
         userInstance.save()
         .then(() => {
-            res.send(userInstance);
+            res.status(201).send(userInstance);
         })
         .catch((err) =>{
             console.log(err);
@@ -34,7 +34,7 @@ app.post("/tasks",(req, res) => {
         const taskInstance = new task(req.body);
         taskInstance.save()
         .then(() => {
-            res.send(taskInstance);
+            res.status(201).send(taskInstance);
         })
         .catch((err) =>{
             console.log(err);
