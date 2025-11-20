@@ -26,6 +26,37 @@ app.post("/users",(req, res) => {
 
 });
 
+//route to get users
+app.get("/users",(req, res ) => {
+    
+    user.find({})
+    .then( (users) => {
+        res.send(users);
+
+    })
+    .catch((e) => {
+        res.send(e);
+    });
+
+});
+
+//route to a user single user
+app.get("/users/:id", ( req, res ) => {
+    const _id = req.params.id;
+
+    user.findById( _id )
+    .then((user) => {
+        if(!user){
+           return res.status(404).send("No user with given ID");
+        }
+        res.send(user);
+    })
+    .catch((e) => {
+        res.status(500).send(e);
+    })
+
+});
+
 
 //=== route for adding tasks
 app.post("/tasks",(req, res) => {
@@ -41,6 +72,30 @@ app.post("/tasks",(req, res) => {
             res.status(400).send("Unable to add record: " + err );
         })
     }
+
+});
+
+//---------------------->> route to read all tasks
+app.get("/tasks" , (req, res ) => {
+    task.find({}).then((tasks) => {
+        res.send(tasks);
+    })
+    .catch((e) => { res.status(500).send(e)});
+});
+
+//----------------------->> route to read on task
+app.get("/tasks/:id", (req, res ) => {
+    const _id = req.params.id;
+
+    task.findById(_id).then((oneTask) => {
+        if(!oneTask){
+            return res.status(404).send("No task found with a given id");
+        }
+        res.send(oneTask);
+    })
+    .catch((e) => {
+        res.status(500).send(e);
+    })
 
 });
 
