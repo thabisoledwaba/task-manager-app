@@ -1,14 +1,19 @@
 import express from "express";
 import task from "../models/task.js";
+import auth from "../middleware/auth.js";
 
 const taskRouter = new express.Router();
 
 //=== route for adding tasks
-taskRouter.post("/tasks", async (req, res) => {
+taskRouter.post("/tasks",auth, async (req, res) => {
 
     if(req.body){
         try{
-            const taskRecord = new task(req.body);
+            const taskRecord = new task({
+                ...req.body,
+                owner: req.user._id
+            });
+
             await taskRecord.save();
             res.status(201).send(taskRecord);
         }catch(e){
@@ -32,10 +37,34 @@ taskRouter.post("/tasks", async (req, res) => {
 });
 
 //---------------------->> route to read all tasks
-taskRouter.get("/tasks" , async (req, res ) => {
+// GET /tasks?completed=true
+// GET /tasks?limit=4&skip=0
+// GET /tasks?sortBy=createdAt_desc 
+taskRouter.get("/tasks" , auth, async (req, res ) => {
     try{
-        const tasks = await task.find({});  
-        res.send(tasks); 
+        const match = {};
+        const sort = {};
+
+        if(req.query.completed){
+            match.done = req.query.completed === "true";
+        }
+
+        if(req.query.sortBy){
+            const parts = req.query.sortBy.split("_")
+            sort[parts[0]] = parts[1] === "desc" ? -1 : 1;
+        }
+        
+        const userRec = req.user;
+        await userRec.populate({
+            path: "usertasks",
+            match,
+            options:{
+                limit: parseInt(req.query.limit),
+                skip: parseInt(req.query.skip),
+                sort
+            }
+        });
+        res.send(userRec.usertasks); 
     }catch(e){
         res.status(500).send(e);
     };
@@ -48,13 +77,13 @@ taskRouter.get("/tasks" , async (req, res ) => {
 });
 
 //----------------------->> route to read on task ---------------------
-taskRouter.get("/tasks/:id", async (req, res ) => {
+taskRouter.get("/tasks/:id",auth, async (req, res ) => {
     const _id = req.params.id;
 
     try{
-        const taskRecord = await task.findById(_id);
+        const taskRecord = await task.findOne( {  _id,  owner: req.user._id} );
         if(!taskRecord){
-            return res.status(404).send("No task found with a given ID");
+            return res.status(404).send("No task found");
         }
         res.send(taskRecord);
     }catch(e){
@@ -75,7 +104,7 @@ taskRouter.get("/tasks/:id", async (req, res ) => {
 });
 
 //========== a route to update a task by id ====================
-taskRouter.patch("/tasks/:id", async (req, res ) => {
+taskRouter.patch("/tasks/:id", auth, async (req, res ) => {
 
     const updates = Object.keys(req.body);
     const allowedOperation = ["done","description"];
@@ -86,13 +115,21 @@ taskRouter.patch("/tasks/:id", async (req, res ) => {
     }
 
     try{
-        const taskUpdate = await task.findByIdAndUpdate(req.params.id, req.body, {new:true, runValidators:true});
-        
-        if(!taskUpdate){
-            return res.status(404).send("Unsuccesful Update");
-        }
+        //the line bypasses mongoose middleware
+        //const taskUpdate = await task.findByIdAndUpdate(req.params.id, req.body, {new:true, runValidators:true});
+        //-const TaskDoc = await task.findById(req.params.id);
 
-        return res.send(taskUpdate);
+        const TaskDoc = await task.findOne( { _id: req.params.id, owner: req.user._id });
+        if(!TaskDoc){
+            return res.status(401).send("No task found with a given ID")
+        }
+        updates.forEach((update) => {            
+            TaskDoc[update] = req.body[update];
+        });
+
+        const taskUpdate = await TaskDoc.save(); 
+        
+        res.send(taskUpdate);
     }catch(e){
         return res.status(500).send();
     };
@@ -100,14 +137,16 @@ taskRouter.patch("/tasks/:id", async (req, res ) => {
 
 
 // ================ route to delete a task ==========================
-taskRouter.delete("/tasks/:id", async (req, res ) => {
+taskRouter.delete("/tasks/:id", auth, async (req, res ) => {
 
     try{
-        const Task = await task.findByIdAndDelete(req.params.id);
+        //const Task = await task.findByIdAndDelete(req.params.id);
+        const Task = await task.findOne({ _id:req.params.id, owner : req.user._id });
         if(!Task){
             return res.status(404).send({error:"No task with a given id"});
         }
-
+        await task.deleteOne(Task);
+        
         res.send("Delete successfull");
     }catch(e){
         res.status(500).send();
